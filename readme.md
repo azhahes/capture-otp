@@ -31,6 +31,12 @@ Optional flags:
 
 - `-show-window`, `-sw`: Display a window showing the live video stream from the webcam. Press the "Space" key to capture an image.
 
+## Installation
+
+```
+go install github.com/azhahes/capture-otp@v0.0.1
+```
+
 ## Build Information
 
 The application uses two external Go packages: "gocv" for webcam access and image processing, and "gosseract" for OCR functionality. The build instructions for these libraries are as follows:
