@@ -6,6 +6,9 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"os"
+	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/otiai10/gosseract/v2"
@@ -21,7 +24,17 @@ func main() {
 	}
 	defer webcam.Close()
 
-	imagePath := "captured_image.jpg"
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	imagePath := path.Join(dirname, "Pictures", "captured_image.jpg")
+	_, err = createDirIfNotExists(imagePath)
+	if err != nil {
+		log.Fatal("Failed to create directory:", err)
+	}
+
 	if err := captureImage(webcam, imagePath, showWindow); err != nil {
 		log.Fatal("Failed to capture image:", err)
 	}
@@ -37,6 +50,13 @@ func main() {
 	fmt.Println("Matched string:", text)
 	fmt.Println("=====================")
 	fmt.Println("OTP:", string(match))
+}
+
+func createDirIfNotExists(p string) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(p), 0770); err != nil {
+		return nil, err
+	}
+	return os.Create(p)
 }
 
 func parseCmdLineArgs(showWindow *bool) {
