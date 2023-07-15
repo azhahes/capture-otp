@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"image"
-	"image/color"
 	"log"
+	"regexp"
 
 	"github.com/otiai10/gosseract/v2"
 	"gocv.io/x/gocv"
@@ -28,7 +27,12 @@ func main() {
 		log.Fatal("Failed to read text from image:", err)
 	}
 
-	fmt.Println("Text from the image:", text)
+	r := regexp.MustCompile(`\d{6}`)
+	match := r.Find([]byte(text))
+
+	fmt.Println("Matched string:", text)
+	fmt.Println("=====================")
+	fmt.Println("OTP:", string(match))
 }
 
 // Capture image from webcam and save to file
@@ -38,20 +42,6 @@ func captureImage(webcam *gocv.VideoCapture, imagePath string) error {
 
 	if ok := webcam.Read(&img); !ok {
 		return fmt.Errorf("cannot read from device")
-	}
-
-	// Add a text overlay to the image
-	text := "Press any key to capture"
-	gocv.PutText(&img, text, image.Point{X: 10, Y: 30}, gocv.FontHersheyPlain, 1.2, color.RGBA{255, 255, 255, 0}, 2)
-
-	window := gocv.NewWindow("Press any key to capture")
-	defer window.Close()
-
-	for {
-		window.IMShow(img)
-		if window.WaitKey(1) >= 0 {
-			break
-		}
 	}
 
 	// Save the image
