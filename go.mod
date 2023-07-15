@@ -1,4 +1,4 @@
-module main
+module github.com/azhahes/capture-otp
 
 go 1.20
 
