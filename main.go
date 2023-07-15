@@ -1,7 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"image"
+	"image/color"
 	"log"
 	"regexp"
 
@@ -10,6 +13,8 @@ import (
 )
 
 func main() {
+	var showWindow bool
+	parseCmdLineArgs(&showWindow)
 	webcam, err := gocv.OpenVideoCapture(0)
 	if err != nil {
 		log.Fatalf("Error opening capture device: %v\n", err)
@@ -17,17 +22,16 @@ func main() {
 	defer webcam.Close()
 
 	imagePath := "captured_image.jpg"
-	if err := captureImage(webcam, imagePath); err != nil {
+	if err := captureImage(webcam, imagePath, showWindow); err != nil {
 		log.Fatal("Failed to capture image:", err)
 	}
 
-	// Read text from the captured image using Tesseract OCR
 	text, err := readTextFromImage(imagePath)
 	if err != nil {
 		log.Fatal("Failed to read text from image:", err)
 	}
 
-	r := regexp.MustCompile(`\d{6}`)
+	r := regexp.MustCompile(`\d{4,}`)
 	match := r.Find([]byte(text))
 
 	fmt.Println("Matched string:", text)
@@ -35,35 +39,58 @@ func main() {
 	fmt.Println("OTP:", string(match))
 }
 
-// Capture image from webcam and save to file
-func captureImage(webcam *gocv.VideoCapture, imagePath string) error {
-	img := gocv.NewMat()
-	defer img.Close()
+func parseCmdLineArgs(showWindow *bool) {
+	flag.BoolVar(showWindow, "show-window", false, "flag to show window")
+	flag.BoolVar(showWindow, "sw", false, "flag to show window (shorthand)")
+	flag.Parse()
+}
 
-	if ok := webcam.Read(&img); !ok {
-		return fmt.Errorf("cannot read from device")
+// Capture image from webcam and save to file
+func captureImage(webcam *gocv.VideoCapture, imagePath string, showWindow bool) error {
+	var window *gocv.Window
+	if showWindow {
+		fmt.Println("show window set to true")
+		window = gocv.NewWindow("Captura")
+		defer window.Close()
 	}
 
-	// Save the image
-	if ok := gocv.IMWrite(imagePath, img); !ok {
-		return fmt.Errorf("failed to write image to disk")
+	for {
+		img := gocv.NewMat()
+		defer img.Close()
+
+		if ok := webcam.Read(&img); !ok {
+			return fmt.Errorf("cannot read from device")
+		}
+
+		var key int
+		if showWindow {
+			gocv.PutText(&img, "Press Space to capture", image.Point{X: 10, Y: 30}, gocv.FontHersheyPlain, 2, color.RGBA{255, 0, 0, 0}, 5)
+			window.IMShow(img)
+			key = window.WaitKey(1)
+			if key == 27 { // Press 'Esc' key to exit the loop
+				break
+			}
+		}
+
+		if !showWindow || key == 32 {
+			if ok := gocv.IMWrite(imagePath, img); !ok {
+				return fmt.Errorf("failed to write image to disk")
+			}
+			break
+		}
 	}
 
 	return nil
 }
 
-// Read text from the captured image using Tesseract OCR
 func readTextFromImage(imagePath string) (string, error) {
 	client := gosseract.NewClient()
 	defer client.Close()
 
-	// Set the language for OCR (default is "eng")
 	client.SetLanguage("eng")
 
-	// Set the path to the image file
 	client.SetImage(imagePath)
 
-	// Perform OCR on the image
 	text, err := client.Text()
 	if err != nil {
 		return "", err
